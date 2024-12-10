@@ -1,29 +1,87 @@
-//
-//
 
-from datetime import datetime
+    import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:path/path.dart';
 
-# Dados dos jogadores
-jogadores = [
-    {
-        "nome": "Isabelle",
-        "id": 1,
-        "data_nascimento": datetime.strptime("10/09/2007", "%d/%m/%Y").date()
-    },
-    {
-        "nome": "Isadora",
-        "id": 2,
-        "data_nascimento": datetime.strptime("12/09/2007", "%d/%m/%Y").date()
-    }
-]
+class Aluno {
+  int? id;
+  String nome;
+  String dataNascimento;
 
-# Função para exibir os dados de cada jogador
-def exibir_jogadores(jogadores):
-    for jogador in jogadores:
-        print(f"Nome: {jogador['nome']}")
-        print(f"ID: {jogador['id']}")
-        print(f"Data de Nascimento: {jogador['data_nascimento'].strftime('%d/%m/%Y')}")
-        print()
+  Aluno({this.id, required this.nome, required this.dataNascimento});
 
-# Chamando a função para exibir as informações
-exibir_jogadores(jogadores)
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'nome': nome,
+      'data_nascimento': dataNascimento,
+    };
+  }
+}
+
+class AlunoDatabase {
+  static final AlunoDatabase instance = AlunoDatabase._init();
+
+  static Database? _database;
+
+  AlunoDatabase._init();
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('aluno.db');
+    return _database!;
+  }
+
+  Future<Database> _initDB(String dbName) async {
+    final dbPath = await databaseFactoryFfi.getDatabasesPath();
+    final path = join(dbPath, dbName);
+
+    return await databaseFactoryFfi.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE TB_ALUNOS (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              nome TEXT NOT NULL,
+              data_nascimento TEXT NOT NULL
+            )
+          ''');
+        },
+      ),
+    );
+  }
+
+  Future<int> insertAluno(Aluno aluno) async {
+    final db = await database;
+    return db.insert('TB_ALUNOS', aluno.toMap());
+  }
+
+  Future<List<Aluno>> getAllAlunos() async {
+    final db = await database;
+    final result = await db.query('TB_ALUNOS');
+    return result.map((map) => Aluno(
+      id: map['id'] as int?,
+      nome: map['nome'] as String,
+      dataNascimento: map['data_nascimento'] as String,
+    )).toList();
+  }
+}
+
+void main() async {
+  // Inicializa o driver FFI
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+
+  // Configuração do banco de dados
+  final db = AlunoDatabase.instance;
+
+  // Inserir exemplo
+  await db.insertAluno(Aluno(nome: 'isabelle', dataNascimento: '2007-09-12'));
+  await db.insertAluno(Aluno(nome: 'isadora', dataNascimento: '2007-09-10'));
+  // Listar todos os alunos
+  final alunos = await db.getAllAlunos();
+  for (var aluno in alunos) {
+    print('Aluno: ${aluno.nome}, Nascimento: ${aluno.dataNascimento}');
+  }
+}
