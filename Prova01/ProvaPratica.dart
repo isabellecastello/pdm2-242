@@ -1,6 +1,7 @@
 // Exemplo do Pacote sqlite3 2.1.0
 // Isabelle silva castello branco 
-// Botei indicando oq cada execuçao faz.
+// Botei indicando oq cada execução faz.
+// print da execução no outro arquivo.
 
 import 'dart:io';
 import 'package:sqlite3/sqlite3.dart';
